@@ -9,10 +9,9 @@ import xml.etree.ElementTree as et
 class SyntaxError(Exception):
   pass
 
-
-TBLOCK = r'//(\w+)[ \t]*'
+TBLOCK = r'//([\w][\w:]*)[ \t]*'
 TCLOSE = r'//'
-TATTR = r"(\w+)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
+TATTR = r"([\w][\w:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
 TATTR_SINGLE = r"(\w+)[ \t]*"
 TOPEN = r'/'
 TEOL = r'[ \t\r]*\n+( *)'

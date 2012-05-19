@@ -4,6 +4,7 @@ import os
 import os.path
 import sys
 import re
+import getopt
 import xml.etree.ElementTree as et
 
 class SyntaxError(Exception):
@@ -53,10 +54,9 @@ def block(indent, builder, input):
 
   while True:
     tok, m = attr(input)
+    input = adv(input, m)
     if tok is None:
       break
-
-    input = adv(input, m)
 
     if tok == TATTR:
       el.set(m.group(1), m.group(2))
@@ -65,6 +65,7 @@ def block(indent, builder, input):
 
   tok, m = token(input)
   input = adv(input, m)
+
   if tok == TOPEN:
     indent += 2  # Can continue on next line.
   elif tok == TEOL:
@@ -78,6 +79,8 @@ def block(indent, builder, input):
   elif tok == TCLOSE:
     builder.end(tag)
     return input
+  else:
+    raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
   while True:
     tok, m = token(input)
@@ -115,14 +118,31 @@ def block(indent, builder, input):
   return input
 
 
+re_leading_blanks = re.compile(r'^[\s\n]+', re.S)
+
 if __name__ == '__main__':
-  with open(sys.argv[1]) as f:
+  opts, args = getopt.getopt(sys.argv[1:], None, ['xml', 'html5'])
+  opts = dict(opts)
+
+  with open(args[0]) as f:
     input = f.read()
 
   builder = et.TreeBuilder()
-  _ = block(0, builder, input)
-  tree = et.ElementTree(builder.close())
 
-  with open(sys.argv[2], 'w') as f:
-    tree.write(f)
-    print>>f
+  with open(args[1], 'w') as f:
+
+    if '--xml' in opts:
+      print>>f, '<?xml version="1.0"?>'
+    elif '--html5' in opts:
+      print>>f, '<!DOCTYPE html>'
+
+    while True:
+      input = re_leading_blanks.sub('', input)
+      if len(input) == 0:
+        break
+      input = block(0, builder, input)
+      root = builder.close()
+      tree = et.ElementTree(root)
+
+      tree.write(f)
+      print>>f

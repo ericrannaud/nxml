@@ -10,14 +10,14 @@ import xml.etree.ElementTree as et
 class SyntaxError(Exception):
   pass
 
-TBLOCK = r'//([\w][\w:]*)[ \t]*'
-TCLOSE = r'//'
+TBLOCK = r'\(\(([\w][\w:]*)[ \t]*'
+TCLOSE = r'\)\)'
 TATTR = r"([\w][\w:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
 TATTR_SINGLE = r"(\w+)[ \t]*"
-TOPEN = r'/'
+TOPEN = r'\|'
 TEOL = r'[ \t\r]*\n+( *)'
 # Must be last.
-TANY = r'[^/\n]+'
+TANY = r'(.*?)(\(\(|\)\)|\n)'
 tokens = [TBLOCK, TCLOSE, TOPEN, TEOL, TANY]
 attrs = [TATTR, TATTR_SINGLE]
 
@@ -35,13 +35,13 @@ def attr(input):
       return t, m
   return None, None
 
-def adv(input, m):
+def adv(input, m, gr=0):
   if m is None:
     return input
-  return input[len(m.group(0)):]
+  return input[len(m.group(gr)):]
 
-def rew(input, m):
-  return m.group(0) + input
+def rew(input, m, gr=0):
+  return m.group(gr) + input
 
 def block(indent, builder, input):
   tok, m = token(input)
@@ -109,7 +109,8 @@ def block(indent, builder, input):
 
     elif tok == TANY:
       # Content.
-      builder.data(m.group(0))
+      input = rew(input, m, 2)
+      builder.data(m.group(1))
 
     else:
       raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))

@@ -6,11 +6,11 @@ if exists("b:current_syntax")
   finish
 endif
 
-syn match ndocNotAttr "//[[:alpha:]_][[:alpha:]_0-9:.]*" contained contains=@NoSpell,@ndocAttr
+syn match ndocNotAttr "(([[:alpha:]_][[:alpha:]_0-9:.]*" contained contains=@NoSpell,@ndocAttr
 syn match ndocAttr "[[:alpha:]_][[:alpha:]_0-9:.]*" contained contains=@NoSpell,ndocAttrValue
 syn region ndocAttrValue start="'" skip="\\'" end="'" contained contains=@NoSpell
-syn match ndocTagEnd "//"
-syn region ndocTag start="//[[:alpha:]_][[:alpha:]_0-9:.]*" end="\(\n\|/\)" contains=@NoSpell,ndocNotAttr,ndocAttr,ndocAttrValue,ndocTag
+syn match ndocTagEnd "))"
+syn region ndocTag start="(([[:alpha:]_][[:alpha:]_0-9:.]*" end="\(\n\||\)" contains=@NoSpell,ndocNotAttr,ndocAttr,ndocAttrValue,ndocTag
 
 hi def link ndocTag Keyword
 hi def link ndocNotAttr Keyword

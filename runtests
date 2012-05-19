@@ -3,9 +3,10 @@
 for n in t/t*.ndoc; do
   t=$(basename $n .ndoc)
   tmp=t/result_$t.xml
-  ./ndoc $n $tmp
-  if ! cmp t/$t.xml $tmp; then
+  if ! ./ndoc $n $tmp || ! cmp t/$t.xml $tmp; then
+    err=$?
     echo "FAILED $f"
+    exit $err
   fi
   rm $tmp
 done

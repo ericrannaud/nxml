@@ -1,0 +1,15 @@
+//ndoc
+  //type foo
+    //field a/The first //b/beautiful// field.
+    //field b
+      The second field.
+      On several lines.
+    //p
+      This type is //i/quite// useful.
+    //fun mk
+      Use it to make one.
+      //arg size/Size//
+      //ret/The one.
+      IMPORTANT: Will deprecate soon!
+    //p
+      No more functions.

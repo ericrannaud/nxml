@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+for n in t/t*.ndoc; do
+  t=$(basename $n .ndoc)
+  tmp=t/result_$t.xml
+  ./ndoc $n $tmp
+  if ! cmp t/$t.xml $tmp; then
+    echo "FAILED $f"
+  fi
+  rm $tmp
+done

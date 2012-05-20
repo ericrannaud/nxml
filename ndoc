@@ -44,6 +44,18 @@ def adv(input, m, gr=0):
 def rew(input, m, gr=0):
   return m.group(gr) + input
 
+def strip(re_strip, s):
+  if re_strip is None:
+    return s
+  else:
+    return re_strip.sub('', s)
+
+def strip_leading(verbatim, indent):
+  if verbatim:
+    return re.compile(''.join([' ' for _ in range(indent)]) + '$')
+  else:
+    return None
+
 def block(indent, builder, input):
   tok, m = token(input)
   if m is None or tok != TBLOCK:
@@ -57,6 +69,7 @@ def block(indent, builder, input):
   else:
     closer = TCLOSE
     non_closer = TCLOSE_VERBATIM
+  re_strip = strip_leading(verbatim, indent)
 
   tag = m.group(2)
   el = builder.start(tag, {})
@@ -77,13 +90,13 @@ def block(indent, builder, input):
 
   if tok == TOPEN:
     indent += 2  # Can continue on next line.
-  elif tok == TEOL:
-    builder.data(m.group(0))
-
-    if len(m.group(1)) > indent:
+  elif tok == TEOL and len(m.group(1)) > indent:
       # Equivalent to TOPEN.
       indent = len(m.group(1))
-    else:
+      re_strip = strip_leading(verbatim, indent)
+      builder.data(strip(re_strip, m.group(0)))
+  elif tok == TEOL:
+      builder.data(strip(re_strip, m.group(0)))
       builder.end(tag)
       return input, len(m.group(1))
   elif tok == closer:
@@ -91,6 +104,8 @@ def block(indent, builder, input):
     return input, indent
   else:
     raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
+
+  re_strip = strip_leading(verbatim, indent)
 
   ignore = set([TOPEN])
   while True:
@@ -112,14 +127,14 @@ def block(indent, builder, input):
       break
 
     elif tok == TEOL and len(m.group(1)) < indent:
-      builder.data(m.group(0))
+      builder.data(strip(re_strip, m.group(0)))
       # Close.
       input = rew(input, m)
       closing_indent = len(m.group(1))
       break
 
     elif tok == TEOL:
-      builder.data(m.group(0))
+      builder.data(strip(re_strip, m.group(0)))
       # Continue content.
 
     elif tok == non_closer:

@@ -10,16 +10,17 @@ import xml.etree.ElementTree as et
 class SyntaxError(Exception):
   pass
 
-TBLOCK = r'(<|<<<)(%?[\w][\w:]*)[ \t]*'
-TCLOSE_VERBATIM = r'>>>'
-TCLOSE = r'>'
-TATTR = r"([\w][\w:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
+TBLOCK_VERBATIM = r'^(<<<)(%?[\w][\w:]*)[ \t]*'
+TBLOCK = r'^(<)(%?[\w][\w:]*)[ \t]*'
+TCLOSE_VERBATIM = r'^>>>'
+TCLOSE = r'^>'
+TATTR = r"^([\w][\w:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
 TATTR_SINGLE = r"(\w+)[ \t]*"
-TOPEN = r'\|'
-TEOL = r'(?:[ \t\r]*\n)+( *)'
+TOPEN = r'^\|'
+TEOL = r'^(?:[ \t\r]*\n)+( *)'
 # Must be last.
-TANY = r'(.*?)(<|>|<<<|>>>|\n)'
-tokens = [TBLOCK, TCLOSE_VERBATIM, TCLOSE, TOPEN, TEOL, TANY]
+TANY = r'^(.+?)(<|>|<<<|>>>|\n)'
+tokens = [TBLOCK_VERBATIM, TBLOCK, TCLOSE_VERBATIM, TCLOSE, TOPEN, TEOL, TANY]
 attrs = [TATTR, TATTR_SINGLE]
 
 def token(input, ignore=None):
@@ -92,7 +93,7 @@ def process_directive(orig_builder, parent, el, orig_input, indent):
 
 def block(indent, builder, input, parent):
   tok, m = token(input)
-  if m is None or tok != TBLOCK:
+  if m is None or tok not in [TBLOCK, TBLOCK_VERBATIM]:
     return input, indent
   input = adv(input, m)
 
@@ -100,9 +101,14 @@ def block(indent, builder, input, parent):
   if verbatim:
     closer = TCLOSE_VERBATIM
     non_closer = TCLOSE
+    starter = [TBLOCK_VERBATIM]
+    non_starter = [TBLOCK]
   else:
     closer = TCLOSE
     non_closer = TCLOSE_VERBATIM
+    starter = [TBLOCK, TBLOCK_VERBATIM]
+    non_starter = []
+  re_strip = strip_leading(verbatim, indent)
 
   tag = m.group(2)
   el = builder.start(tag, {})
@@ -144,7 +150,7 @@ def block(indent, builder, input, parent):
 
   re_strip = strip_leading(verbatim, indent)
 
-  ignore = set([TOPEN])
+  ignore = set([TOPEN, non_closer] + non_starter)
   while True:
     tok, m = token(input, ignore=ignore)
     if tok is None:
@@ -152,7 +158,7 @@ def block(indent, builder, input, parent):
       break
     input = adv(input, m)
 
-    if tok == TBLOCK:
+    if tok in starter:
       # Sub block.
       input = rew(input, m)
       input, closing_indent = block(indent, builder, input, el)
@@ -173,10 +179,6 @@ def block(indent, builder, input, parent):
     elif tok == TEOL:
       builder.data(strip(re_strip, m.group(0)))
       # Continue content.
-
-    elif tok == non_closer:
-      # Content.
-      builder.data(m.group(0))
 
     elif tok == TANY:
       # Content.

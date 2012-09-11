@@ -103,7 +103,6 @@ def block(indent, builder, input, parent):
   else:
     closer = TCLOSE
     non_closer = TCLOSE_VERBATIM
-  re_strip = strip_leading(verbatim, indent)
 
   tag = m.group(2)
   el = builder.start(tag, {})
@@ -122,13 +121,17 @@ def block(indent, builder, input, parent):
   tok, m = token(input)
   input = adv(input, m)
 
+  re_strip = strip_leading(verbatim, indent)
+
   if tok == TOPEN:
     indent += 2  # Can continue on next line.
   elif tok == TEOL and len(m.group(1)) > indent:
-      # Equivalent to TOPEN.
-      indent = len(m.group(1))
-      re_strip = strip_leading(verbatim, indent)
-      builder.data(strip(re_strip, m.group(0)))
+    # Equivalent to TOPEN.
+    indent = len(m.group(1))
+    re_strip = strip_leading(verbatim, indent)
+    data = strip(re_strip, m.group(0))
+    if not verbatim:
+      builder.data(data)
   elif tok == TEOL:
       builder.data(strip(re_strip, m.group(0)))
       builder.end(tag)

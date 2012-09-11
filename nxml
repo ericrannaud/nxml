@@ -10,7 +10,7 @@ import xml.etree.ElementTree as et
 class SyntaxError(Exception):
   pass
 
-TBLOCK = r'(<|<<<)([\w][\w:]*)[ \t]*'
+TBLOCK = r'(<|<<<)(%?[\w][\w:]*)[ \t]*'
 TCLOSE_VERBATIM = r'>>>'
 TCLOSE = r'>'
 TATTR = r"([\w][\w:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
@@ -56,7 +56,41 @@ def strip_leading(verbatim, indent):
   else:
     return None
 
-def block(indent, builder, input):
+# When this is called, the tag corresponding to the directive must
+# have been ended.
+def process_directive(orig_builder, parent, el, orig_input, indent):
+  directive = el.tag.startswith('%')
+  if not directive:
+    return orig_input, indent
+
+  if parent is not None:
+    parent.remove(el)
+    builder = et.TreeBuilder()
+  else:
+    # No parent, the directive is at the root.
+    _ = orig_builder.close()
+    builder = orig_builder
+
+  if el.tag == '%include':
+    fn = el.get('path')
+    if fn is None:
+      raise Exception("Malformed directive '%include', missing required 'path' attribute")
+    with open(fn) as f:
+      input = f.read()
+
+    while True:
+      input, ok = parse(builder, input)
+      if not ok:
+        break
+      if parent is None:
+        return orig_input, indent
+      else:
+        root = builder.close()
+        parent.append(root)
+
+  return orig_input, indent
+
+def block(indent, builder, input, parent):
   tok, m = token(input)
   if m is None or tok != TBLOCK:
     return input, indent
@@ -98,10 +132,10 @@ def block(indent, builder, input):
   elif tok == TEOL:
       builder.data(strip(re_strip, m.group(0)))
       builder.end(tag)
-      return input, len(m.group(1))
+      return process_directive(builder, parent, el, input, len(m.group(1)))
   elif tok == closer:
     builder.end(tag)
-    return input, indent
+    return process_directive(builder, parent, el, input, indent)
   else:
     raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
@@ -118,7 +152,7 @@ def block(indent, builder, input):
     if tok == TBLOCK:
       # Sub block.
       input = rew(input, m)
-      input, closing_indent = block(indent, builder, input)
+      input, closing_indent = block(indent, builder, input, el)
       if closing_indent < indent:
         break
 
@@ -150,10 +184,23 @@ def block(indent, builder, input):
       raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
   builder.end(tag)
-  return input, closing_indent
+  return process_directive(builder, parent, el, input, closing_indent)
 
 
 re_leading_blanks = re.compile(r'^[\s\n]+', re.S)
+
+def parse(builder, input):
+  input = re_leading_blanks.sub('', input)
+  if len(input) == 0:
+    return input, False
+  prev_len = len(input)
+
+  input, _ = block(0, builder, input, None)
+
+  if len(input) == prev_len:
+    return input, False
+  else:
+    return input, True
 
 if __name__ == '__main__':
   opts, args = getopt.getopt(sys.argv[1:], None, ['xml', 'html5'])
@@ -172,17 +219,10 @@ if __name__ == '__main__':
       print>>f, '<!DOCTYPE html>'
 
     while True:
-      input = re_leading_blanks.sub('', input)
-      if len(input) == 0:
+      input, ok = parse(builder, input)
+      if not ok:
         break
-      prev_len = len(input)
-
-      input, _ = block(0, builder, input)
       root = builder.close()
       tree = et.ElementTree(root)
-
       tree.write(f)
       print>>f
-
-      if len(input) == prev_len:
-        break

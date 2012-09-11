@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-for n in t/t*.ndoc; do
-  t=$(basename $n .ndoc)
+for n in t/t*.nxml; do
+  t=$(basename $n .nxml)
   tmp=t/result_$t.xml
-  if ! ./ndoc $n $tmp || ! cmp t/$t.xml $tmp; then
+  if ! ./nxml $n $tmp || ! cmp t/$t.xml $tmp; then
     err=$?
     echo "FAILED $f"
     exit $err

@@ -14,8 +14,8 @@ TBLOCK_VERBATIM = r'^(<<<)(%?[\w][\w:]*)[ \t]*'
 TBLOCK = r'^(<)(%?[\w][\w:]*)[ \t]*'
 TCLOSE_VERBATIM = r'^>>>'
 TCLOSE = r'^>'
-TATTR = r"^([\w][\w:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
-TATTR_SINGLE = r"(\w+)[ \t]*"
+TATTR = r"^([\w][\w\-:.]*)=(?:\'((?:[^']|\\')*)\'|(\S+))[ \t]*"
+TATTR_SINGLE = r"([\w\-]+)[ \t]*"
 TOPEN = r'^\|'
 TEOL = r'^(?:[ \t\r]*\n)+( *)'
 # Must be last.

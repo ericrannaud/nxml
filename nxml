@@ -5,6 +5,7 @@ import os.path
 import sys
 import re
 import getopt
+import StringIO
 import xml.etree.ElementTree as et
 
 class SyntaxError(Exception):
@@ -229,5 +230,13 @@ if __name__ == '__main__':
         break
       root = builder.close()
       tree = et.ElementTree(root)
-      tree.write(f)
-      print>>f
+
+      buf = StringIO.StringIO()
+      tree.write(buf)
+      s = buf.getvalue()
+      buf.close()
+
+      s = re.sub(r'&gt;', '>', s)
+      s = re.sub(r'&lt;', '<', s)
+
+      print>>f, s

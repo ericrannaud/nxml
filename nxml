@@ -80,15 +80,19 @@ def process_directive(orig_builder, parent, el, orig_input, indent):
     with open(fn) as f:
       input = f.read()
 
-    while True:
-      input, ok = parse(builder, input)
-      if not ok:
-        break
-      if parent is None:
-        return orig_input, indent
-      else:
-        root = builder.close()
-        parent.append(root)
+    if fn.endswith('.nxml'):
+      while True:
+        input, ok = parse(builder, input)
+        if not ok:
+          break
+        if parent is None:
+          return orig_input, indent
+        else:
+          root = builder.close()
+          parent.append(root)
+    else:
+      # Not an nxml file, this contains just text.
+      parent.text += input
 
   return orig_input, indent
 

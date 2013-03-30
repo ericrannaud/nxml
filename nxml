@@ -6,6 +6,7 @@ import sys
 import re
 import getopt
 import StringIO
+import codecs
 import xml.etree.ElementTree as et
 
 class SyntaxError(Exception):
@@ -77,7 +78,7 @@ def process_directive(orig_builder, parent, el, orig_input, indent):
     fn = el.get('path')
     if fn is None:
       raise Exception("Malformed directive '%include', missing required 'path' attribute")
-    with open(fn) as f:
+    with codecs.open(fn, encoding='utf-8') as f:
       input = f.read()
 
     if fn.endswith('.nxml'):
@@ -216,12 +217,12 @@ if __name__ == '__main__':
   opts, args = getopt.getopt(sys.argv[1:], None, ['xml', 'html5'])
   opts = dict(opts)
 
-  with open(args[0]) as f:
+  with codecs.open(args[0], encoding='utf-8') as f:
     input = f.read()
 
   builder = et.TreeBuilder()
 
-  with open(args[1], 'w') as f:
+  with codecs.open(args[1], 'w') as f:
 
     if '--xml' in opts:
       print>>f, '<?xml version="1.0"?>'
@@ -236,7 +237,7 @@ if __name__ == '__main__':
       tree = et.ElementTree(root)
 
       buf = StringIO.StringIO()
-      tree.write(buf)
+      tree.write(buf, encoding='utf-8')
       s = buf.getvalue()
       buf.close()
 

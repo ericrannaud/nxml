@@ -89,6 +89,8 @@ def try_process_directive(orig_builder, parent, el, orig_input, indent):
     else:
       # Not an nxml file, this contains just text.
       parent.text += input
+  else:
+    raise Exception("Unknown directive '%s'" % el.tag)
 
   return orig_input, indent
 
@@ -214,7 +216,7 @@ def parse(builder, input):
     return input, True
 
 if __name__ == '__main__':
-  opts, args = getopt.getopt(sys.argv[1:], None, ['xml', 'html5'])
+  opts, args = getopt.getopt(sys.argv[1:], None, ['lang='])
   opts = dict(opts)
 
   with codecs.open(args[0], encoding='utf-8') as f:
@@ -224,10 +226,12 @@ if __name__ == '__main__':
 
   with codecs.open(args[1], 'w') as f:
 
-    if '--xml' in opts:
-      print>>f, '<?xml version="1.0"?>'
-    elif '--html5' in opts:
-      print>>f, '<!DOCTYPE html>'
+    if '--lang' in opts:
+      lang = opts['--lang']
+      if lang == 'xml':
+        print>>f, '<?xml version="1.0"?>'
+      elif lang == 'html5':
+        print>>f, '<!DOCTYPE html>'
 
     while True:
       input, ok = parse(builder, input)

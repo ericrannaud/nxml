@@ -232,14 +232,18 @@ class XML(object):
       lang = env.get('lang')
       if lang == 'xml':
         print>>out, '<?xml version="1.0"?>'
+        method = 'xml'
       elif lang == 'html5':
         print>>out, '<!DOCTYPE html>'
+        method = 'html'
+      else:
+        raise Exception()
 
       for element in elements:
         tree = et.ElementTree(element)
 
         buf = StringIO.StringIO()
-        tree.write(buf, encoding='utf-8')
+        tree.write(buf, encoding='utf-8', method=method)
         s = buf.getvalue()
         buf.close()
 

@@ -4,7 +4,7 @@ import os
 import os.path
 import sys
 import re
-import getopt
+import argparse
 import StringIO
 import codecs
 import xml.etree.ElementTree as et
@@ -258,10 +258,19 @@ def find_processor(env):
   raise Exception("No valid processor found for lang='%s'" % lang)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], None, ['lang='])
-  opts = dict(opts)
+  argparser = argparse.ArgumentParser()
+  argparser.add_argument('input',
+      help='stdin if -')
+  argparser.add_argument('output', nargs='?', default='/dev/stdout',
+      help='stdout if ommitted')
+  argparser.add_argument('--set', action='append', metavar='name=value',
+      help='environment override')
 
-  with codecs.open(args[0], encoding='utf-8') as f:
+  args = argparser.parse_args()
+  if args.input == '-':
+    args.input = '/dev/stdin'
+
+  with codecs.open(args.input, encoding='utf-8') as f:
     input = f.read()
 
   env = {}
@@ -280,11 +289,15 @@ def main():
       # Empty builder
       pass
 
-  if '--lang' in opts:
-    env['lang'] = opts['--lang']
+  if args.set is not None:
+    for pair in args.set:
+      m = re.match(r"(\w+)='?(.*)'?", pair)
+      if m is None:
+        raise Exception("Malformed --set argument %s\n" % pair)
+      env[m.group(1)] = m.group(2)
 
   processor = find_processor(env)
-  processor.process(args[1], env, elements)
+  processor.process(args.output, env, elements)
 
 if __name__ == '__main__':
   main()

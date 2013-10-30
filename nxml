@@ -25,10 +25,10 @@ TANY = r'^(.+?)(<|>|<<<|>>>|\n)'
 tokens = [TBLOCK_VERBATIM, TBLOCK, TCLOSE_VERBATIM, TCLOSE, TOPEN, TEOL, TANY]
 attrs = [TATTR, TATTR_SINGLE]
 
-def token(input, ignore=None):
+def token(input, ignore_tokens=None):
   for t in tokens:
     m = re.match(t, input)
-    if m is not None and (ignore is None or t not in ignore):
+    if m is not None and (ignore_tokens is None or t not in ignore_tokens):
       return t, m
   return None, None
 
@@ -39,31 +39,26 @@ def attr(input):
       return t, m
   return None, None
 
-def adv(input, m, gr=0):
+def advance(input, m, gr=0):
   if m is None:
     return input
   return input[len(m.group(gr)):]
 
-def rew(input, m, gr=0):
+def rewind(input, m, gr=0):
   return m.group(gr) + input
 
-def strip(re_strip, s):
-  if re_strip is None:
-    return s
-  else:
-    return re_strip.sub('', s)
+def strip_whitespaces(s):
+  return s.lstrip(' \t').rstrip(' \t')
 
-def strip_leading(verbatim, indent):
-  if verbatim:
-    return re.compile(''.join([' ' for _ in range(indent)]) + '$')
-  else:
-    return None
+def strip_indent(indent, s):
+  regex = ''.join([' ' for _ in range(indent)]) + '$'
+  return re.sub(regex, '', s)
 
 # When this is called, the tag corresponding to the directive must
 # have been ended.
-def process_directive(orig_builder, parent, el, orig_input, indent):
-  directive = el.tag.startswith('%')
-  if not directive:
+def try_process_directive(orig_builder, parent, el, orig_input, indent):
+  is_directive = el.tag.startswith('%')
+  if not is_directive:
     return orig_input, indent
 
   if parent is not None:
@@ -97,13 +92,30 @@ def process_directive(orig_builder, parent, el, orig_input, indent):
 
   return orig_input, indent
 
+def block_start(builder, input, tag):
+  el = builder.start(tag, {})
+
+  while True:
+    tok, m = attr(input)
+    input = advance(input, m)
+    if tok is None:
+      break
+
+    if tok == TATTR:
+      el.set(m.group(1), m.group(2))
+    else:
+      el.set(m.group(1), '')
+
+  return input, el
+
 def block(indent, builder, input, parent):
   tok, m = token(input)
   if m is None or tok not in [TBLOCK, TBLOCK_VERBATIM]:
     return input, indent
-  input = adv(input, m)
+  input = advance(input, m)
 
-  verbatim = len(m.group(1)) == 3
+  chevrons = m.group(1)
+  verbatim = len(chevrons) == 3
   if verbatim:
     closer = TCLOSE_VERBATIM
     non_closer = TCLOSE
@@ -114,88 +126,76 @@ def block(indent, builder, input, parent):
     non_closer = TCLOSE_VERBATIM
     starter = [TBLOCK, TBLOCK_VERBATIM]
     non_starter = []
-  re_strip = strip_leading(verbatim, indent)
 
   tag = m.group(2)
-  el = builder.start(tag, {})
-
-  while True:
-    tok, m = attr(input)
-    input = adv(input, m)
-    if tok is None:
-      break
-
-    if tok == TATTR:
-      el.set(m.group(1), m.group(2))
-    else:
-      el.set(m.group(1), '')
+  input, el = block_start(builder, input, tag)
 
   tok, m = token(input)
-  input = adv(input, m)
-
-  re_strip = strip_leading(verbatim, indent)
+  input = advance(input, m)
 
   if tok == TOPEN:
     indent += 2  # Can continue on next line.
   elif tok == TEOL and len(m.group(1)) > indent:
     # Equivalent to TOPEN.
     indent = len(m.group(1))
-    re_strip = strip_leading(verbatim, indent)
-    data = strip(re_strip, m.group(0))
-    if not verbatim:
-      builder.data(data)
   elif tok == TEOL:
-      builder.data(strip(re_strip, m.group(0)))
-      builder.end(tag)
-      return process_directive(builder, parent, el, input, len(m.group(1)))
+    builder.end(tag)
+    return try_process_directive(builder, parent, el, input, len(m.group(1)))
   elif tok == closer:
     builder.end(tag)
-    return process_directive(builder, parent, el, input, indent)
+    return try_process_directive(builder, parent, el, input, indent)
   else:
     raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
-  re_strip = strip_leading(verbatim, indent)
-
-  ignore = set([TOPEN, non_closer] + non_starter)
+  ignore_tokens = set([TOPEN, non_closer] + non_starter)
+  data = ''
+  explicit_closer = False
   while True:
-    tok, m = token(input, ignore=ignore)
+    tok, m = token(input, ignore_tokens=ignore_tokens)
     if tok is None:
       closing_indent = indent
       break
-    input = adv(input, m)
+    input = advance(input, m)
 
     if tok in starter:
       # Sub block.
-      input = rew(input, m)
+      builder.data(data)
+      data = ''
+
+      input = rewind(input, m)
       input, closing_indent = block(indent, builder, input, el)
       if closing_indent < indent:
         break
 
     elif tok == closer:
+      explicit_closer = True
       closing_indent = indent
       break
 
     elif tok == TEOL and len(m.group(1)) < indent:
-      builder.data(strip(re_strip, m.group(0)))
+      data += strip_indent(indent, m.group(0))
       # Close.
-      input = rew(input, m)
+      input = rewind(input, m)
       closing_indent = len(m.group(1))
       break
 
     elif tok == TEOL:
-      builder.data(strip(re_strip, m.group(0)))
+      data += strip_indent(indent, m.group(0))
       # Continue content.
 
     elif tok == TANY:
       # Content.
-      input = rew(input, m, 2)
-      builder.data(m.group(1))
+      input = rewind(input, m, 2)
+      data += strip_indent(indent, m.group(1))
 
     else:
       raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
+  if not explicit_closer:
+    data = data.rstrip()
+  builder.data(data)
   builder.end(tag)
-  return process_directive(builder, parent, el, input, closing_indent)
+  return try_process_directive(builder, parent, el, input, closing_indent)
 
 
 re_leading_blanks = re.compile(r'^[\s\n]+', re.S)

@@ -1,21 +1,9 @@
-<ndoc>
-  <type foo="">
-    <field a="">The first <b>beautiful</b> field.
-    </field>
-    <field b="">
-      The second field.
-      On several lines.
-    </field>
-    <p>
-      This type is <i>quite</i> useful.
-    </p>
-    <fun mk="">
-      Use it to make one.
-      <arg size="">Size</arg>
-      <ret>The one.
-      </ret>
-      IMPORTANT: Will deprecate soon!
-    </fun>
-    <p>
-      No more functions.
-</p></type></ndoc>
+<ndoc><type foo=""><field a="">The first <b>beautiful</b> field.</field>
+<field b="">The second field.
+On several lines.</field>
+<p>This type is <i>quite</i> useful.</p>
+<fun mk="">Use it to make one.
+<arg size="">Size</arg>
+<ret>The one.</ret>
+IMPORTANT: Will deprecate soon!</fun>
+<p>No more functions.</p></type></ndoc>

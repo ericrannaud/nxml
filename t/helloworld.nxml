@@ -1,4 +1,18 @@
 <<<pre class='code clang'
   int main() {
+    int x;
+
     printf("Hello, World!\n");
-  }>>>
+  }
+
+
+    
+<<<pre class='code clang'
+  int main() {
+    int x;
+
+    printf("Hello, World!\n");
+  }
+
+
+    >>>

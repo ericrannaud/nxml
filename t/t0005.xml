@@ -1,7 +1,13 @@
-<html>
-  <body class="test">
-    <h1>Hello, World!
-    </h1>
-    <pre class="code clang">int main() {
+<html><body class="test"><h1>Hello, World!</h1>
+<pre class="code clang">int main() {
+  int x;
+
   printf("Hello, World!\n");
-}</pre></body></html>
+}</pre><pre class="code clang">int main() {
+  int x;
+
+  printf("Hello, World!\n");
+}
+
+
+  </pre></body></html>

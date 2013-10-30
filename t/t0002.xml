@@ -1,29 +1,25 @@
-<html>
-  <body class="test">
-    <section class="content">
-      <p>
-        This is a paragraph of text. I like writing text, don't I.
-        Text is nice to write.
-    </p></section>
-    <section class="comments">
-      <ul>
-        <li>
-          One entry in its own paragraph.
-        </li>
-        <li> On the same line would be nice? This <b>word</b> is in bold.
-        </li>
-        <li>
-        </li><li> The previous one was empty.
-        </li>
-        <li> <span class="test">Show as a test</span>.
-      </li></ul>
-      <p>
-        Go to <a href="http://google.com">Google</a>.
-    </p></section>
-    <p>
-      It is completely possible to do something nested where
-      <b>
-        important
-      </b>
-      stuff is isolated in the middle of the rest that way.
-</p></body></html>
+<html><body class="test"><section class="content"><p>This is a paragraph of text. I like writing text, don't I.
+Text is nice to write.</p></section>
+<section class="comments"><ul><li>One entry in its own paragraph.</li>
+<li> On the same line would be nice? This <b>word</b> is in bold.</li>
+<li /><li> The previous one was empty.</li>
+<li> <span class="test">Show as a test</span>.</li></ul>
+<p>Go to <a href="http://google.com">Google</a>.</p></section>
+<p>It is completely possible to do something nested where
+<b>important starting on one line
+and continuing on the next</b>
+stuff is isolated in the middle of the rest that way.
+<b>important starting on one line
+and continuing on the next</b>
+stuff is isolated in the middle of the rest that way.
+<b>important starting on one line
+and continuing on the next
+</b>
+stuff is isolated in the middle of the rest that way.
+<b>important starting on one line
+and continuing on the next
+ </b>
+stuff is isolated in the middle of the rest that way.
+<b>important starting on one line
+and continuing on the next  
+    </b></p></body></html>

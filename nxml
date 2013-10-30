@@ -22,18 +22,18 @@ TOPEN = r'^\|'
 TEOL = r'^(?:[ \t\r]*\n)+( *)'
 # Must be last.
 TANY = r'^(.+?)(<|>|<<<|>>>|\n)'
-tokens = [TBLOCK_VERBATIM, TBLOCK, TCLOSE_VERBATIM, TCLOSE, TOPEN, TEOL, TANY]
-attrs = [TATTR, TATTR_SINGLE]
+TOKENS = [TBLOCK_VERBATIM, TBLOCK, TCLOSE_VERBATIM, TCLOSE, TOPEN, TEOL, TANY]
+ATTRS = [TATTR, TATTR_SINGLE]
 
 def token(input, ignore_tokens=None):
-  for t in tokens:
+  for t in TOKENS:
     m = re.match(t, input)
     if m is not None and (ignore_tokens is None or t not in ignore_tokens):
       return t, m
   return None, None
 
 def attr(input):
-  for t in attrs:
+  for t in ATTRS:
     m = re.match(t, input)
     if m is not None:
       return t, m
@@ -56,17 +56,18 @@ def strip_indent(indent, s):
 
 # When this is called, the tag corresponding to the directive must
 # have been ended.
-def try_process_directive(orig_builder, parent, el, orig_input, indent):
+def try_process_directive(env, orig_builder, parent, el, orig_input, indent):
   is_directive = el.tag.startswith('%')
   if not is_directive:
     return orig_input, indent
 
   if parent is not None:
     parent.remove(el)
-    builder = et.TreeBuilder()
+    builder = [et.TreeBuilder()]
   else:
-    # No parent, the directive is at the root.
-    _ = orig_builder.close()
+    # No parent, the directive is at the root, we have to create a new
+    # TreeBuilder to get rid of the node of the directive.
+    orig_builder[0] = et.TreeBuilder()
     builder = orig_builder
 
   if el.tag == '%include':
@@ -78,24 +79,31 @@ def try_process_directive(orig_builder, parent, el, orig_input, indent):
 
     if fn.endswith('.nxml'):
       while True:
-        input, ok = parse(builder, input)
+        input, ok = parse(env, builder, input)
         if not ok:
           break
         if parent is None:
           return orig_input, indent
         else:
-          root = builder.close()
-          parent.append(root)
+          try:
+            root = builder[0].close()
+            parent.append(root)
+          except AssertionError, ignore:
+            # Empty builder
+            pass
     else:
       # Not an nxml file, this contains just text.
       parent.text += input
+  elif el.tag == '%set':
+    for name, value in el.items():
+      env[name] = value
   else:
     raise Exception("Unknown directive '%s'" % el.tag)
 
   return orig_input, indent
 
 def block_start(builder, input, tag):
-  el = builder.start(tag, {})
+  el = builder[0].start(tag, {})
 
   while True:
     tok, m = attr(input)
@@ -110,7 +118,7 @@ def block_start(builder, input, tag):
 
   return input, el
 
-def block(indent, builder, input, parent):
+def block(env, indent, builder, input, parent):
   tok, m = token(input)
   if m is None or tok not in [TBLOCK, TBLOCK_VERBATIM]:
     return input, indent
@@ -141,11 +149,11 @@ def block(indent, builder, input, parent):
     # Equivalent to TOPEN.
     indent = len(m.group(1))
   elif tok == TEOL:
-    builder.end(tag)
-    return try_process_directive(builder, parent, el, input, len(m.group(1)))
+    builder[0].end(tag)
+    return try_process_directive(env, builder, parent, el, input, len(m.group(1)))
   elif tok == closer:
-    builder.end(tag)
-    return try_process_directive(builder, parent, el, input, indent)
+    builder[0].end(tag)
+    return try_process_directive(env, builder, parent, el, input, indent)
   else:
     raise Exception("Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
@@ -161,11 +169,11 @@ def block(indent, builder, input, parent):
 
     if tok in starter:
       # Sub block.
-      builder.data(data)
+      builder[0].data(data)
       data = ''
 
       input = rewind(input, m)
-      input, closing_indent = block(indent, builder, input, el)
+      input, closing_indent = block(env, indent, builder, input, el)
       if closing_indent < indent:
         break
 
@@ -195,57 +203,88 @@ def block(indent, builder, input, parent):
 
   if not explicit_closer:
     data = data.rstrip()
-  builder.data(data)
-  builder.end(tag)
-  return try_process_directive(builder, parent, el, input, closing_indent)
+  builder[0].data(data)
+  builder[0].end(tag)
+  return try_process_directive(env, builder, parent, el, input, closing_indent)
 
 
 re_leading_blanks = re.compile(r'^[\s\n]+', re.S)
 
-def parse(builder, input):
+def parse(env, builder, input):
   input = re_leading_blanks.sub('', input)
   if len(input) == 0:
     return input, False
   prev_len = len(input)
 
-  input, _ = block(0, builder, input, None)
+  input, _ = block(env, 0, builder, input, None)
 
   if len(input) == prev_len:
     return input, False
   else:
     return input, True
 
-if __name__ == '__main__':
+class XML(object):
+  LANGS = ['xml', 'html5']
+
+  @classmethod
+  def process(cls, out_fn, env, elements):
+    with codecs.open(out_fn, 'w') as out:
+      lang = env.get('lang')
+      if lang == 'xml':
+        print>>out, '<?xml version="1.0"?>'
+      elif lang == 'html5':
+        print>>out, '<!DOCTYPE html>'
+
+      for element in elements:
+        tree = et.ElementTree(element)
+
+        buf = StringIO.StringIO()
+        tree.write(buf, encoding='utf-8')
+        s = buf.getvalue()
+        buf.close()
+
+        s = re.sub(r'&gt;', '>', s)
+        s = re.sub(r'&lt;', '<', s)
+
+        print>>out, s
+
+PROCESSORS = [XML]
+
+def find_processor(env):
+  lang = env.get('lang', 'xml')
+  for p in PROCESSORS:
+    if lang in p.LANGS:
+      return p
+  raise Exception("No valid processor found for lang='%s'" % lang)
+
+def main():
   opts, args = getopt.getopt(sys.argv[1:], None, ['lang='])
   opts = dict(opts)
 
   with codecs.open(args[0], encoding='utf-8') as f:
     input = f.read()
 
-  builder = et.TreeBuilder()
+  env = {}
+  # 1-element array used as a reference: see try_process_directive()
+  builder = [et.TreeBuilder()]
+  elements = []
 
-  with codecs.open(args[1], 'w') as f:
+  while True:
+    input, ok = parse(env, builder, input)
+    if not ok:
+      break
+    try:
+      root = builder[0].close()
+      elements.append(root)
+    except AssertionError, ignore:
+      # Empty builder
+      pass
 
-    if '--lang' in opts:
-      lang = opts['--lang']
-      if lang == 'xml':
-        print>>f, '<?xml version="1.0"?>'
-      elif lang == 'html5':
-        print>>f, '<!DOCTYPE html>'
+  if '--lang' in opts:
+    env['lang'] = opts['--lang']
 
-    while True:
-      input, ok = parse(builder, input)
-      if not ok:
-        break
-      root = builder.close()
-      tree = et.ElementTree(root)
+  processor = find_processor(env)
+  processor.process(args[1], env, elements)
 
-      buf = StringIO.StringIO()
-      tree.write(buf, encoding='utf-8')
-      s = buf.getvalue()
-      buf.close()
-
-      s = re.sub(r'&gt;', '>', s)
-      s = re.sub(r'&lt;', '<', s)
-
-      print>>f, s
+if __name__ == '__main__':
+  main()

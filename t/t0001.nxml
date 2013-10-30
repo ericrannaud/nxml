@@ -1,3 +1,4 @@
+<%set lang='html5'
 <ndoc
   <type foo
     <field a|The first <b|beautiful> field.

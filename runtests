@@ -5,7 +5,7 @@ for n in t/t*.nxml; do
   tmp=t/result_$t.xml
   if ! ./nxml $n $tmp || ! cmp t/$t.xml $tmp; then
     err=$?
-    echo "FAILED $f"
+    echo "FAILED $t"
     exit $err
   fi
   rm $tmp

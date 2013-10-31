@@ -1,6 +1,7 @@
 <%set lang='html5'
 <ndoc
-  <type foo
+  <type foo \
+  black=''
     <field a|The first <b|beautiful> field.
     <field b
       The second field.

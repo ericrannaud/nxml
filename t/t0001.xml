@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<ndoc><type foo=""><field a="">The first <b>beautiful</b> field.</field>
+<ndoc><type black="" foo=""><field a="">The first <b>beautiful</b> field.</field>
 <field b="">The second field.
 On several lines.</field>
 <p>This type is <i>quite</i> useful.</p>

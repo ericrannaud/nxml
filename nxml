@@ -247,9 +247,6 @@ class XML(object):
         s = buf.getvalue()
         buf.close()
 
-        s = re.sub(r'&gt;', '>', s)
-        s = re.sub(r'&lt;', '<', s)
-
         print>>out, s
 
 PROCESSORS = [XML]

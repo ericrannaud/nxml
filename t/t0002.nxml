@@ -8,16 +8,19 @@
       <ul
         <li
           One entry in its own paragraph.
-        <li| On the same line would be nice? This <b|word> is in bold.
-        <li
-        <li| The previous one was empty.
-        <li| <span class='test'|Show as a test>.
+        <li| On the same line would be nice? This <b|word> is in bold.>
+        <li>
+        <li| The previous one was empty.>
+        <li| <span class='test'|Show as a test>.>
       <p
         Go to <a href='http://google.com'|Google>.
     <p
       It is completely possible to do something nested where
       <b|important starting on one line
-        and continuing on the next
+      and continuing on the next>
+      stuff is isolated in the middle of the rest that way.
+      <b|important starting on one line
+        and continuing on the next>
       stuff is isolated in the middle of the rest that way.
       <b
         important starting on one line

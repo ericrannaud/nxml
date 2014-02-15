@@ -1,8 +1,8 @@
-<%set lang='html5'
+<%set lang='html5'>
 <ndoc
   <type foo \
   black=''
-    <field a|The first <b|beautiful> field.
+    <field a|The first <b|beautiful> field.>
     <field b
       The second field.
       On several lines.
@@ -11,7 +11,7 @@
     <fun mk
       Use it to make one.
       <arg size|Size>
-      <ret|The one.
+      <ret|The one.>
       IMPORTANT: Will deprecate soon!
     <p
       No more functions.

@@ -1,4 +1,4 @@
 <html
   <body class='test'
-    <h1|Hello, World!
-    <%include path='t/helloworld.nxml'
+    <h1|Hello, World!>
+    <%include path='t/helloworld.nxml'>

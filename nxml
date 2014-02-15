@@ -34,7 +34,7 @@ TEOL = r'^(?:[ \t\r]*\n)+( *)'
 # Must be last.
 TANY = r'^(.+?)(<|>|<<<|>>>|\n)'
 TOKENS = [TBLOCK_VERBATIM, TBLOCK, TCLOSE_VERBATIM, TCLOSE, TOPEN, TEOL, TANY]
-ATTRS = [TATTR, TATTR_SINGLE]
+ATTRS = [TATTR, TATTR_SINGLE, TEOL]
 
 def token(input, ignore_tokens=None):
   for t in TOKENS:
@@ -113,11 +113,13 @@ def try_process_directive(args, env, orig_builder, parent, el, orig_input, inden
 
   return orig_input, indent
 
-def block_start(builder, input, tag):
+def block_start(indent, builder, input, tag):
   el = builder[0].start(tag, {})
 
   while True:
     tok, m = attr(input)
+    if tok == TEOL and len(m.group(1)) != indent:
+      break
     input = advance(input, m)
     if tok is None:
       break
@@ -149,19 +151,23 @@ def block(args, env, indent, builder, input, parent):
     non_starter = []
 
   tag = m.group(2)
-  input, el = block_start(builder, input, tag)
+  input, el = block_start(indent, builder, input, tag)
 
   tok, m = token(input)
   input = advance(input, m)
 
+  need_explicit_closer = False
   if tok == TOPEN:
-    indent += 2  # Can continue on next line.
+    need_explicit_closer = True
   elif tok == TEOL and len(m.group(1)) > indent:
+    if len(m.group(1)) != indent + 2:
+      raise SyntaxError(args, input,
+          "Invalid indentation")
     # Equivalent to TOPEN.
     indent = len(m.group(1))
   elif tok == TEOL:
-    builder[0].end(tag)
-    return try_process_directive(env, builder, parent, el, input, len(m.group(1)))
+    raise SyntaxError(args, input,
+        "Missing explicit closer '%s'" % closer)
   elif tok == closer:
     builder[0].end(tag)
     return try_process_directive(args, env, builder, parent, el, input, indent)
@@ -222,6 +228,9 @@ def block(args, env, indent, builder, input, parent):
           "Unexpected token '%s': '%s'" % (tok, m.group(0)))
 
   if not explicit_closer:
+    if need_explicit_closer:
+      raise SyntaxError(args, input,
+          "Missing explicit closer '%s'" % closer)
     data = data.rstrip()
   builder[0].data(data)
   builder[0].end(tag)
